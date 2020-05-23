@@ -21,8 +21,10 @@ mod ANALYSIS is
   --- Scenario 1, Fig.2
   --- demands: 20, 80, 60
   --- allocated: 15, 60, 45
-  ---(
-  eq initState = { 0.0 | nil } < m : Monitor | result: empty >
+  ---
+  eq initState = { 0.0 | nil } 
+     < m : Monitor | snapshots: empty > [sampleExp(1.0), snapshot to m, 0]
+	 
      < tb : Table | paths: (([in1,n1,e1] [in4,n4,e4]) ;;
                             ([in2,n2,e2] [in5,n4,e4]) ;;
 							([in3,n3,e3] [in6,n4,e4])) > 
@@ -44,11 +46,11 @@ mod ANALYSIS is
                   reservationMap: empty,
                   sqn: 0 >
 
-    [0.0, crtr([in1,n1,e1] [in4,n4,e4],[in4,n4,e4],minBW,20.0,maxT,n1), 0]
-    [4.0, crtr([in2,n2,e2] [in5,n4,e4],[in5,n4,e4],minBW,80.0,maxT,n2), 0]
-    [8.0, crtr([in3,n3,e3] [in6,n4,e4],[in6,n4,e4],minBW,60.0,maxT,n3), 0]
+    [sampleExp(1.0), crtr([in1,n1,e1] [in4,n4,e4],[in4,n4,e4],minBW,20.0,maxT,n1), 0]
+    [sampleExp(1.0), crtr([in2,n2,e2] [in5,n4,e4],[in5,n4,e4],minBW,80.0,maxT,n2), 0]
+    [sampleExp(1.0), crtr([in3,n3,e3] [in6,n4,e4],[in6,n4,e4],minBW,60.0,maxT,n3), 0]
 				   .
-	)
+	
 				   
   --- Scenario 2, Fig.3
   --- demands: 20, 400, 60
@@ -117,7 +119,7 @@ mod ANALYSIS is
   
   
   --- Scenario 5, longer paths
-  ---
+  ---(
   eq initState = { 0.0 | nil } < m : Monitor | result: empty >
      < tb : Table | paths: (([in1,n1,e1] [in4,n4,e4] [in7,n5,e5]) ;;
                             ([in2,n2,e2] [in5,n4,e4] [in7,n5,e6]) ;;
@@ -147,7 +149,7 @@ mod ANALYSIS is
     [sampleExp(1.0), crtr(([in2,n2,e2] [in5,n4,e4] [in7,n5,e6]),([in5,n4,e4] [in7,n5,e6]),minBW,80.0,maxT,n2), 0]
     [sampleExp(1.0), crtr(([in3,n3,e3] [in6,n4,e4] [in7,n5,e7]),([in6,n4,e4] [in7,n5,e7]),minBW,60.0,maxT,n3), 0]
 				   .
-	
+	)
 endm
 
 set clear rules off .
@@ -160,3 +162,35 @@ rew initConfig .
 
 ---after n5
 ---{3.0,reply(r(n1, 0), 1, 1, 1, 2, [in1,n1,e1] [in4,n4,e4] [in7,n5,e5], 0.0, 2.0e+2, Infinity, (1.2e+2 ; 1.2e+2) 4.0e+1 ; 4.0e+1) from n5 to n4}
+
+---(
+rew [1] run({2.0,reserve(r(n1, 0), 1, 1, 1, 1, [in1,n1,e1] [in4,n4,e4],
+    0.0, 2.0e+1, 3.0e+2, ept) from n1 to n4} 
+{2.0 |
+[7.0,snapshot to m,0]} 
+< tb : Table | paths: (([in1,n1,e1] [in4,n4,e4]) ;; ([in2,n2,e2] [in5,n4,e4])
+    ;; [in3,n3,e3] [in6,n4,e4]) > 
+< m : Monitor | snapshots: (r(n1, 0) |-> < 0.0 undefined >) > 
+< n1 : Node | egress: < e1,1.0e+2 >,ingress: < in1,Infinity >,reservationMap: (
+    r(n1, 0) |-> [[in1,n1,e1] [in4,n4,e4],0,1,1,1 |-> < 0.0,2.0e+1,undefined,
+    3.0e+2,undefined >]),sqn: 2 > 
+< n2 : Node | egress: < e2,2.0e+2 >,ingress: < in2,Infinity >,reservationMap:
+    empty,sqn: 0 > 
+< n3 : Node | egress: < e3,1.25e+2 >,ingress: < in3,Infinity >,reservationMap:
+    empty,sqn: 0 > 
+< n4 : Node | egress: < e4,1.5e+2 >,ingress: (< in4,1.0e+2 > ; < in5,2.0e+2 > ;
+    < in6,1.25e+2 >),reservationMap: empty,sqn: 0 >, 1.0e+1) .
+	
+
+
+rew add(7.0,(r(n1, 0) |-> < 0.0 undefined >),  
+    < n1 : Node | egress: < e1,1.0e+2 >,ingress: < in1,Infinity >,reservationMap: (
+    r(n1, 0) |-> [[in1,n1,e1] [in4,n4,e4],0,1,1,1 |-> < 0.0,2.0e+1,undefined,
+    3.0e+2,2.0e+1 >]),sqn: 2 >) .
+	
+	
+rew < m : Monitor | snapshots: add(7.0,(r(n1, 0) |-> < 0.0 undefined >),  
+    < n1 : Node | egress: < e1,1.0e+2 >,ingress: < in1,Infinity >,reservationMap: (
+    r(n1, 0) |-> [[in1,n1,e1] [in4,n4,e4],0,1,1,1 |-> < 0.0,2.0e+1,undefined,
+    3.0e+2,2.0e+1 >]),sqn: 2 >) > [7.0, snapshot to m, 0] {7.0 | nil} .
+	)

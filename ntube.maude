@@ -29,9 +29,9 @@ mod N-TUBE is
   inc NODE + MSG + PARAMETERS + PATH-TABLE + AUX .
 
   vars O O' TB IN E M : Address .
-  vars T MINBW MAXBW MAXT CAP CAP' AVAIL IDEAL IDBW EXPT RESBW : Float .
+  vars T MINBW MAXBW MAXT CAP CAP' AVAIL IDEAL IDBW EXPT RESBW RESBW' : Float .
   vars REST REST' : AttributeSet .
-  vars SQN SQN' INDEX PTR PTR' FIRST FIRST' LAST LAST' : Nat .
+  vars SQN SQN' INDEX INDEX' PTR PTR' FIRST FIRST' LAST LAST' : Nat .
   var PT : PathTable .
   vars P P' SEG : Path .
   var RID : ReservationId .
@@ -42,7 +42,14 @@ mod N-TUBE is
   var VM : VersionMap .
   var SL : ScheduleList .
   var CONF : Config .
-  var RESULT : AccBWMap .
+  var RS : Map{ReservationId,Snapshots} .
+  var SS : Snapshots .
+  var SCH : Scheduler .
+  var AC : ActorConfig .
+  var A : Actor .
+  vars T1 GT : Float .
+  var M1 : Msg .
+  var VRL : VerRecordList .
 
   --- self loop
   rl [self-loop] :
@@ -58,14 +65,16 @@ mod N-TUBE is
   --- 1. CRTR
   --- randomly cut off a segment of the path
   rl [crtr] :
+     < M : Monitor | snapshots: RS, REST' >
      < O : Node | sqn: SQN, reservationMap: RM, REST >
      {T, crtr(P,SEG,MINBW,MAXBW,MAXT,O)}
   => 
+     < M : Monitor | snapshots: insert(r(O,SQN),< T undefined >,RS), REST' >
      < O : Node | sqn: s s SQN, 
 	              reservationMap: insert(r(O,SQN),[P,0,first(SEG,P),last(SEG,P),
                                   s SQN |-> < MINBW, MAXBW, undefined, MAXT, undefined >],RM), REST >
      [mDelay, reserve(r(O,SQN),s SQN,1,first(SEG,P),last(SEG,P),P,MINBW,MAXBW,MAXT,ept) 
-              from O to next(O,P), drop?]
+              from O to next(O,P), drop?] 
 	 [rnDelay, renew(r(O,SQN),P,SEG,MINBW,MAXBW,MAXT,O), drop?] .  --- renew a reservation	  
 			  
   ---genReset(MAXT,r(O,SQN),s SQN,P)  --- 15. RST      
@@ -76,7 +85,7 @@ mod N-TUBE is
    = genReset(MAXT,RID,INDEX,P) [MAXT, reset(RID,INDEX) to O, 0] .
   eq genReset(MAXT,RID,INDEX,ept) = null .    
   
-  
+  ---
   --- RENEW
   rl [renew] :
      < O : Node | sqn: SQN, reservationMap: (RID |-> [P,PTR,FIRST,LAST,VM],RM), REST >
@@ -174,15 +183,13 @@ mod N-TUBE is
   
   --- 8. FIN
   --- atSrc
- crl < M : Monitor | result: RESULT, REST' >
-     < O : Node | reservationMap: RM, REST >
+ crl < O : Node | reservationMap: RM, REST >
      {T, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
    =>
-     < M : Monitor | result: insert(RID,ACCBW,RESULT), REST' >
      < O : Node | reservationMap: update(RID,INDEX,min(ACCBW),RM), REST >
 	 if atSrc(PTR) .
 	   
-	   
+  ---(   
   --- 15. RST
   --- remove expired or unsuccessful reservations
   rl [reset-rmv-existed] :
@@ -203,5 +210,37 @@ mod N-TUBE is
  ceq eagerEnabled(< O : Node | reservationMap: (RID |-> [P,PTR,FIRST,LAST,
 						(INDEX |-> < MINBW, MAXBW, IDBW, EXPT, RESBW >, VM)],RM), REST > CONF)
    = true if RESBW < MINBW .
-   
+   )
+  
+  --- take a snapshot of 'rewBW' for each reservation every 'ssDelay' time units
+  eq step(AC {GT | [ T , M1, 0 ] ; SL}) = { T , M1 } AC {T | SL} [owise] .   
+  eq step(AC  < M : Monitor | snapshots: RS, REST > {GT | [ T, snapshot to M, 0] ; SL}) 
+   = AC < M : Monitor | snapshots: add(T,RS,AC), REST > [ssDelay, snapshot to M, drop?] {T | SL} .
+	 
+  op add : Float Map{ReservationId,Snapshots} ActorConfig -> Map{ReservationId,Snapshots} .  
+  eq add(T,(RID |-> SS,RS),< O : Node | reservationMap: (RID |-> [([IN,O,E] P),PTR,FIRST,LAST,VM],RM), REST > AC)
+   = add(T,(RID |-> (SS ;; < T latestIndex(VM) >),RS),AC) .  --- [IN,O,E] matching O indicates O is the source
+  eq add(T,RS,AC) = RS [owise] .
+       
+  op latestIndex : VersionMap -> Float .
+  eq latestIndex(VM) = $latestIndex(toList(VM)) . 
+  
+  op $latestIndex : VerRecordList -> Float .
+  eq $latestIndex(VRL ;; < INDEX ; undefined >) = $latestIndex(VRL) .
+  eq $latestIndex(VRL ;; < INDEX ; RESBW >) = RESBW [owise] .
+  eq $latestIndex(nil) = undefined .
+  
+  op toList : VersionMap -> VerRecordList .
+  op $toList : VersionMap VerRecordList -> VerRecordList .
+  eq toList(VM) = $toList(VM,nil) .
+  eq $toList((INDEX |-> < MINBW, MAXBW, IDBW, EXPT, RESBW >,VM),VRL)
+   = $toList(VM,sort(< INDEX ; RESBW >,VRL)) .
+  eq $toList(empty,VRL) = VRL .
+  
+  op sort : VerRecordEle VerRecordList -> VerRecordList .
+  eq sort(< INDEX ; RESBW >,(< INDEX' ; RESBW' > ;; VRL))
+   = if INDEX > INDEX' then < INDEX' ; RESBW' > ;; sort(< INDEX ; RESBW >,VRL)
+       else < INDEX ; RESBW > ;; < INDEX' ; RESBW' > ;; VRL fi .
+  eq sort(< INDEX ; RESBW >,nil) = < INDEX ; RESBW > .
+  
 endm

@@ -130,9 +130,12 @@ mod SCHEDULER is
   eq [ t1, M1, 0 ] S = insert(S, [ t1, M1, 0 ]) .
   eq [ t1, M1, P ] S = S [owise] .
 
+---(
+  --- moved to ntube.maude
   eq step(AC {gt | [ t1 , M1, 0 ] ; SL}) =
        { t1 , M1 } AC {t1 | SL} .
-
+  )
+  
   ---(
   eq run(AC {gt | SL}, LIMIT) =
     if (gt <= LIMIT) then

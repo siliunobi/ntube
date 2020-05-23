@@ -40,17 +40,30 @@ fmod SORTS is
   op ept : -> VerRecords [ctor] .
   op _;_ : VerRecords VerRecords -> VerRecords [ctor assoc comm id: ept] .
 
+  sorts VerRecordEle VerRecordList .
+  subsort VerRecordEle < VerRecordList .
+  op <_;_> : Nat Float -> VerRecordEle .
+  op nil : -> VerRecordList .
+  op _;;_ : VerRecordList VerRecordList -> VerRecordList [ctor assoc id: nil] .
 
   --- not used yet
   sort Contents .
   subsort Content < Contents .
   op nil : -> Contents [ctor] .
   op _;;_ : Contents Contents -> Contents [ctor assoc id: nil] .
+  
+  sort Snapshot Snapshots .
+  subsort Snapshot < Snapshots .
+  op <__> : Float Float -> Snapshot . 
+  op nil : -> Snapshots [ctor] .
+  op _;;_ : Snapshots Snapshots -> Snapshots [ctor assoc id: nil] .
+  
 
 endfm
 view ReservationId from TRIV to SORTS is sort Elt to ReservationId . endv
 view VerRecord from TRIV to SORTS is sort Elt to VerRecord . endv
 view AccBW from TRIV to SORTS is sort Elt to AccBW . endv
+view Snapshots from TRIV to SORTS is sort Elt to Snapshots . endv
 
 fmod SORTS-AUX is
   pr MAP{Nat,VerRecord} * (sort Map{Nat,VerRecord} to VersionMap) .
@@ -102,13 +115,16 @@ fmod MSG is
   op start : -> Content .
   op _to_  : Path Address -> Msg .
   op _to_  : Content Address -> Msg .
+  
+  op snapshot : -> Content .
 endfm
 
 fmod NODE is
   inc ACTOR-MODEL .
   pr MAP{ReservationId,RsvRecord} * (sort Map{ReservationId,RsvRecord} to ReservationMap,
                                      sort Entry{ReservationId,RsvRecord} to Reservation) .
-  pr MAP{ReservationId,AccBW} * (sort Map{ReservationId,AccBW} to AccBWMap) .									 
+---  pr MAP{ReservationId,AccBW} * (sort Map{ReservationId,AccBW} to AccBWMap) .		
+  pr MAP{ReservationId,Snapshots} .							 
 
   op Node :                            -> ActorType .
   op egress:_ : Interfaces             -> Attribute .
@@ -119,11 +135,9 @@ fmod NODE is
   --- together with node's address, identifies a reservation
   --- serves as index for reservation's version
   op sqn:_ : Nat                       -> Attribute .  
-  
-  
-  op Monitor : -> ActorType .
-  op result:_ : AccBWMap -> Attribute .
 
+  op Monitor : -> ActorType .
+  op snapshots:_ : Map{ReservationId,Snapshots} -> Attribute .
  
   --- attacker may have the SAME attributes
   op Attacker : -> ActorType .

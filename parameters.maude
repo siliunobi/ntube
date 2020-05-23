@@ -12,7 +12,7 @@ mod PARAMETERS is
   
   --- upper bound on expiration
   op maxT : -> Float .
-  eq maxT = Infinity .
+  eq maxT = 300.0 .
 
   --- minimum acceptable bandwidth
   op minBW : -> Float .
@@ -25,7 +25,7 @@ mod PARAMETERS is
 
   --- msg delay
   op mDelay : -> Float .
-  eq mDelay = 1.0 .
+  eq mDelay = 2.0 .
   --- genRandom(0.0,1.0)
 
   --- self loop for Table to probabilistically pick a source
@@ -35,11 +35,15 @@ mod PARAMETERS is
 
   --- renewal delay
   op rnDelay : -> Float .
-  eq rnDelay = 5.0 .
+  eq rnDelay = 2.0 .
 
   --- deletion delay
   op dDelay : -> Float .
   eq dDelay = Infinity .
+  
+  --- snapshot delay
+  op ssDelay : -> Float .
+  eq ssDelay = sampleExp(1.0) .
 
   --- pvesta runtime upper bound
   eq LIMIT = 100.0 .
