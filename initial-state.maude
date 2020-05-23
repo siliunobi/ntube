@@ -1,0 +1,23 @@
+load prelim
+
+fmod NAMES is
+  inc SORTS .
+
+  --- path table
+  op tb : -> Address .
+  
+  --- monitor
+  op m : -> Address .
+
+  --- nodes
+  ops n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 : -> Address .
+
+  --- egresses
+  ops e1  e2  e3  e4  e5  e6  e7  e8  e9  e10
+      e11 e12 e13 e14 e15 e16 e17 e18 e19 e20 : -> Address .
+
+  --- ingresses
+  ops in1  in2  in3  in4  in5  in6  in7  in8  in9  in10
+      in11 in12 in13 in14 in15 in16 in17 in18 in19 in20 : -> Address .
+
+endfm

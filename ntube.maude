@@ -1,0 +1,207 @@
+load aux
+load path-table
+
+  *** Events
+  *** reservation and deletion msg creation:
+  --- 1. CRTR done
+  --- 2. CRTD to do
+  *** arrival of reservation msg:
+  --- 3. FWD done 
+  --- 4. CMP done
+  --- 5. TRN done
+  --- 6. UPT done
+  --- 7. BWD done
+  --- 8. FIN done
+  *** arrival of deletion msg:
+  --- 9. RMV to do
+  --- 10. DST to do
+  *** drop at any arrival of reservation or deletion msg:
+  --- 11. DRP done
+  *** attack events:
+  --- 12. ATK to do
+  --- 13. CLT to do
+  *** time progress
+  --- 14. TCK done in apmaude.maude
+  *** reversation expiration 
+  --- 15. RST done
+
+mod N-TUBE is
+  inc NODE + MSG + PARAMETERS + PATH-TABLE + AUX .
+
+  vars O O' TB IN E M : Address .
+  vars T MINBW MAXBW MAXT CAP CAP' AVAIL IDEAL IDBW EXPT RESBW : Float .
+  vars REST REST' : AttributeSet .
+  vars SQN SQN' INDEX PTR PTR' FIRST FIRST' LAST LAST' : Nat .
+  var PT : PathTable .
+  vars P P' SEG : Path .
+  var RID : ReservationId .
+  vars ACCBW ACCBW' : AccBW .
+  vars RM RM' : ReservationMap .
+  vars ES INS : Interfaces .
+  var CS : Contents .
+  var VM : VersionMap .
+  var SL : ScheduleList .
+  var CONF : Config .
+  var RESULT : AccBWMap .
+
+  --- self loop
+  rl [self-loop] :
+     < TB : Table | paths: PT >
+     {T, start to TB}
+  =>
+     < TB : Table | paths: PT >
+     [0.0, crtr(nth(PT)), 0]            --- 1. CRTR, create a reservation
+	 [dDelay, crtd(nth(PT)), 0]         --- 2. CRTD, create a reservation deletion
+     [tDelay, start to TB, 0] .         --- self loop
+   
+
+  --- 1. CRTR
+  --- randomly cut off a segment of the path
+  rl [crtr] :
+     < O : Node | sqn: SQN, reservationMap: RM, REST >
+     {T, crtr(P,SEG,MINBW,MAXBW,MAXT,O)}
+  => 
+     < O : Node | sqn: s s SQN, 
+	              reservationMap: insert(r(O,SQN),[P,0,first(SEG,P),last(SEG,P),
+                                  s SQN |-> < MINBW, MAXBW, undefined, MAXT, undefined >],RM), REST >
+     [mDelay, reserve(r(O,SQN),s SQN,1,first(SEG,P),last(SEG,P),P,MINBW,MAXBW,MAXT,ept) 
+              from O to next(O,P), drop?]
+	 [rnDelay, renew(r(O,SQN),P,SEG,MINBW,MAXBW,MAXT,O), drop?] .  --- renew a reservation	  
+			  
+  ---genReset(MAXT,r(O,SQN),s SQN,P)  --- 15. RST      
+  
+  --- removal UPON expired
+  op genReset : Float ReservationId Nat Path -> Config .
+  eq genReset(MAXT,RID,INDEX,([IN,O,E] P))
+   = genReset(MAXT,RID,INDEX,P) [MAXT, reset(RID,INDEX) to O, 0] .
+  eq genReset(MAXT,RID,INDEX,ept) = null .    
+  
+  
+  --- RENEW
+  rl [renew] :
+     < O : Node | sqn: SQN, reservationMap: (RID |-> [P,PTR,FIRST,LAST,VM],RM), REST >
+     {T, renew(RID,P,SEG,MINBW,MAXBW,MAXT,O)}
+  => 
+     < O : Node | sqn: s SQN, 
+	              reservationMap: (RID |-> [P,PTR,FIRST,LAST,insert(SQN,< MINBW,MAXBW,undefined,MAXT,undefined >,VM)],RM), REST >	  
+     [mDelay, reserve(RID,SQN,1,first(SEG,P),last(SEG,P),P,MINBW,MAXBW,MAXT,ept) 
+              from O to next(O,P), drop?]
+	 [rnDelay, renew(RID,P,SEG,MINBW,MAXBW,MAXT,O), drop?] .  --- repeatly renew a reservation	    
+  
+   
+  ---(	  
+  --- 2. CRTD
+  crl < O : Node |  >
+      {T, crtd(O)}
+	=>
+	  < O : Node | >
+	  [mDelay, delete(RID,INDEX)] --- randomly pick one of the indexes 
+  )
+
+
+  --- 3. FWD
+  --- the node receiving the reservation is before the first
+  --- if the node is the source, see rule [crtr]
+ crl [fwd] :
+     < O : Node | reservationMap: RM, REST >
+     {T, reserve(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+   =>
+     < O : Node | reservationMap: insert(RID,[P,PTR,FIRST,LAST,
+                                  INDEX |-> < MINBW, MAXBW, undefined, MAXT, undefined >],RM), REST > 
+     [mDelay, reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O to next(O,P), drop?]
+     if onWay(PTR,FIRST) .
+
+
+  --- 4. CMP
+  --- atSrt or onPth
+  --- first node: idBW = MaxBW
+  crl < O : Node | reservationMap: RM,
+                   egress: (< E,CAP > ; ES),
+                   ingress: (< IN,CAP' > ; INS), REST >
+      {T, reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+    =>
+	  < O : Node | reservationMap: insert(RID,
+	               		[(P [IN,O,E] P'),s PTR,FIRST,LAST,
+	                     INDEX |-> < MINBW, MAXBW, (if atSrt(s PTR,FIRST) then min(MAXBW,CAP') else min(min(MAXBW,CAP'),prevIdeal(ACCBW)) fi), MAXT, 
+	                                 min(ACCBW (AVAIL ; IDEAL)) >],RM),
+	               egress: (< E,CAP > ; ES),
+	               ingress: (< IN,CAP' > ; INS), REST >
+	  (if atEnd(s PTR,LAST)   --- deal with a segment of only one node
+	     then [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to O', drop?]            
+		 else [mDelay, reserve(RID,INDEX,s s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to next(O,(P [IN,O,E] P')), drop?]
+	   fi)
+	  if (atSrt(s PTR,FIRST) or onPth(s PTR,FIRST,LAST)) /\
+         AVAIL := avail(< E,CAP >,O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW)) /\
+         IDEAL := min(min(CAP',MAXBW),ideal(IN,(< IN,CAP' > ; INS),E,(< E,CAP > ; ES),O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW))) . 	 
+
+  --- 5. TRN
+  --- atEnd
+  crl < O : Node | reservationMap: RM,
+                   egress: (< E,CAP > ; ES),
+                   ingress: (< IN,CAP' > ; INS), REST >
+      {T, reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+    =>
+      < O : Node | reservationMap: insert(RID,
+               	   		[(P [IN,O,E] P'),s PTR,FIRST,LAST,
+                     	 INDEX |-> < MINBW, MAXBW, prevIdeal(ACCBW), MAXT, 
+                                     finBW(MAXBW,(ACCBW (AVAIL ; IDEAL))) >],RM),
+                   egress: (< E,CAP > ; ES),
+                   ingress: (< IN,CAP' > ; INS), REST >
+      [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to O', drop?]            
+      if atEnd(s PTR,LAST) /\ (not atSrt(s PTR,FIRST)) /\
+         AVAIL := avail(< E,CAP >,O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW)) /\
+         IDEAL := ideal(IN,(< IN,CAP' > ; INS),E,(< E,CAP > ; ES),O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,(P [IN,O,E] P'),MINBW,MAXBW,MAXT,ACCBW)) .
+	
+  --- 6. UPT
+  --- onPth or (atSrt and not atSrc) 
+ crl < O : Node | reservationMap: RM, REST >
+     {T, reply(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+   =>
+     < O : Node | reservationMap: update(RID,INDEX,min(min(ACCBW),resbw(RM,RID,INDEX)),RM), REST >
+     [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O to prev(O,P), drop?]
+	 if ((atSrt(s PTR,FIRST) and (not atSrc(s PTR))) or onPth(s PTR,FIRST,LAST)) .
+	 
+
+  --- 7. BWD
+  --- onWay
+ crl < O : Node | reservationMap: RM, REST >
+     {T, reply(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+   =>
+     < O : Node | reservationMap: update(RID,INDEX,min(ACCBW),RM), REST >
+     [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O to prev(O,P), drop?]
+	 if onWay(s PTR,FIRST) .
+	
+  
+  --- 8. FIN
+  --- atSrc
+ crl < M : Monitor | result: RESULT, REST' >
+     < O : Node | reservationMap: RM, REST >
+     {T, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+   =>
+     < M : Monitor | result: insert(RID,ACCBW,RESULT), REST' >
+     < O : Node | reservationMap: update(RID,INDEX,min(ACCBW),RM), REST >
+	 if atSrc(PTR) .
+	   
+	   
+  --- 15. RST
+  --- remove expired or unsuccessful reservations
+  rl [reset-rmv-existed] :
+     {T, reset(RID,INDEX) to O}
+     < O : Node | reservationMap: RM, REST >
+   => 
+	 < O : Node | reservationMap: remove(RID,INDEX,RM), REST > .
+	  
+	  
+  --- if enabled, eagerly fired after 5. 6. 7. or 8.
+ crl [reset-less-reserved] :
+     < O : Node | reservationMap: (RID |-> [P,PTR,FIRST,LAST,
+	 					(INDEX |-> < MINBW, MAXBW, IDBW, EXPT, RESBW >, VM)],RM), REST >
+   => 
+	 < O : Node | reservationMap: (RID |-> [P,PTR,FIRST,LAST,VM],RM), REST >	  
+	 if RESBW < MINBW .
+
+ ceq eagerEnabled(< O : Node | reservationMap: (RID |-> [P,PTR,FIRST,LAST,
+						(INDEX |-> < MINBW, MAXBW, IDBW, EXPT, RESBW >, VM)],RM), REST > CONF)
+   = true if RESBW < MINBW .
+   
+endm
