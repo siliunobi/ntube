@@ -43,7 +43,7 @@ mod PARAMETERS is
   
   --- snapshot delay
   op ssDelay : -> Float .
-  eq ssDelay = sampleExp(1.0) .
+  eq ssDelay = 5.0 .
 
   --- pvesta runtime upper bound
   eq LIMIT = 100.0 .

@@ -42,7 +42,7 @@ mod N-TUBE is
   var VM : VersionMap .
   var SL : ScheduleList .
   var CONF : Config .
-  var RS : Map{ReservationId,Snapshots} .
+  vars RS RS' : Map{ReservationId,Snapshots} .
   var SS : Snapshots .
   var SCH : Scheduler .
   var AC : ActorConfig .
@@ -218,9 +218,15 @@ mod N-TUBE is
    = AC < M : Monitor | snapshots: add(T,RS,AC), REST > [ssDelay, snapshot to M, drop?] {T | SL} .
 	 
   op add : Float Map{ReservationId,Snapshots} ActorConfig -> Map{ReservationId,Snapshots} .  
-  eq add(T,(RID |-> SS,RS),< O : Node | reservationMap: (RID |-> [([IN,O,E] P),PTR,FIRST,LAST,VM],RM), REST > AC)
-   = add(T,(RID |-> (SS ;; < T latestIndex(VM) >),RS),AC) .  --- [IN,O,E] matching O indicates O is the source
-  eq add(T,RS,AC) = RS [owise] .
+  op $add : Float Map{ReservationId,Snapshots} ActorConfig Map{ReservationId,Snapshots} -> Map{ReservationId,Snapshots} .
+  
+  
+  eq add(T,RS,AC) = $add(T,RS,AC,empty) .
+  
+  eq $add(T,(RID |-> SS,RS),< O : Node | reservationMap: (RID |-> [([IN,O,E] P),PTR,FIRST,LAST,VM],RM), REST > AC,RS')
+   = $add(T,RS,< O : Node | reservationMap: (RID |-> [([IN,O,E] P),PTR,FIRST,LAST,VM],RM), REST > AC,(RS',RID |-> (SS ;; < T latestIndex(VM) >))) .  
+     --- [IN,O,E] matching O indicates O is the source
+  eq $add(T,empty,AC,RS') = RS' .
        
   op latestIndex : VersionMap -> Float .
   eq latestIndex(VM) = $latestIndex(toList(VM)) . 

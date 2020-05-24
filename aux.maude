@@ -165,7 +165,10 @@ mod AUX is
   --- available bandwidth
   --- 4th argument Float is current global time
   op avail : Interface Address ReservationMap Float Content -> Float .
-  eq avail(< E,FL >,O,RM,GT,CONT) = delta * (FL - aggrAlloc(filterAvail(O,RM,CONT),E,GT)) .
+---  eq avail(< E,FL >,O,RM,GT,CONT) = delta * (FL - aggrAlloc(filterAvail(O,RM,CONT),E,GT)) .
+*** delta encoded
+*** but does it work for avail?
+  eq avail(< E,FL >,O,RM,GT,CONT) = FL - delta * aggrAlloc(filterAvail(O,RM,CONT),E,GT) .
 
   --- 
   op filterAvail : Address ReservationMap Content -> ReservationMap .
@@ -196,7 +199,9 @@ mod AUX is
              linkRatioTransit(O,IN,ITFS,ITFS',filter(O,RM,CONT,cap(ITFS,IN)),GT)
       fi) * 
      tubeRatio(O,IN,ITFS,E,ITFS',filter(O,RM,CONT,cap(ITFS,IN)),GT) * 
-     delta * cap(ITFS',E) .
+	 cap(ITFS',E) .  
+*** delta encoded
+---     delta * cap(ITFS',E) 
   
   op res : ReservationMap ReservationId -> Reservation .
   eq res((RID |-> RR,RM),RID) = RID |-> RR .
