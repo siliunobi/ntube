@@ -85,8 +85,8 @@ mod N-TUBE is
 	              reservationMap: insert(r(O,SQN),[P,0,first(SEG,P),last(SEG,P),
                                   (SQN + 1) |-> < MINBW, MAXBW, undefined, MAXT, undefined >],RM), REST >
      [mDelay, reserve(r(O,SQN),(SQN + 1),1,first(SEG,P),last(SEG,P),P,MINBW,MAXBW,MAXT,ept) 
-              from O to next(O,P), drop?] .
-	 ---[rnDelay, renew(r(O,SQN),P,SEG,MINBW,MAXBW,MAXT,O), drop?]   --- renew a reservation	  
+              from O to next(O,P), drop?] 
+	 [rnDelay, renew(r(O,SQN),P,SEG,MINBW,MAXBW,MAXT,O), drop?] .  --- renew a reservation	  
 			  
   ---(
   --- 15. RST 

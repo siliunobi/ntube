@@ -9,7 +9,7 @@ load initial-state
 load ntube
 
 mod ANALYSIS is
-  inc PARAMETERS + NAMES + PATH-TABLE + NODE + N-TUBE .
+  inc PARAMETERS + NAMES + NODE + N-TUBE .
 
   op initConfig : -> Config .
   eq initConfig = run(initState,LIMIT) .
