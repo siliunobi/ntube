@@ -5,8 +5,8 @@
 
 load parameters
 load initial-state
----load path-table 
-load ntube
+load path-table 
+load ntube-old
 
 mod ANALYSIS is
   inc PARAMETERS + NAMES + PATH-TABLE + NODE + N-TUBE .
@@ -21,7 +21,7 @@ mod ANALYSIS is
   --- Scenario 1, Fig.2
   --- demands: 20, 80, 60
   --- allocated: 15, 60, 45
-  ---(
+  ---
   eq initState = { 0.0 | nil } 
      < m : Monitor | snapshots: empty > [5.0, snapshot to m, 0]
 	 
@@ -50,7 +50,7 @@ mod ANALYSIS is
     [2.0, crtr([in2,n2,e2] [in5,n4,e4],[in5,n4,e4],minBW,80.0,maxT,n2), 0]
     [1.0, crtr([in3,n3,e3] [in6,n4,e4],[in6,n4,e4],minBW,60.0,maxT,n3), 0]
 				   .
-	)
+	
 				   
   --- Scenario 2, Fig.3
   --- demands: 20, 400 (200 + 200), 60
@@ -207,105 +207,7 @@ mod ANALYSIS is
 				   .
 	)
 	
-	
-    --- test for new version
-    ---(
-    eq initState = { 0.0 | nil } 
-       < m : Monitor | snapshots: empty > ---[5.0, snapshot to m, 0]
-	   [0.0, start to tb, 0]
-       < tb : Table | paths: ((n1 ; n2 ; n3)),
-					  links: (< n1 n2 1 100.0 > ;; < n2 n3 1 200.0 >) > 
-				
-       < n1 : Node | reservationMap: empty,
-                     sqn: 0, sink: 0.0  > 
-	   			
-       < n2 : Node | reservationMap: empty,
-                     sqn: 0, sink: 0.0 >
-       < n3 : Node | reservationMap: empty,
-                     sqn: 0, sink: (150.0 * delta) >
-					 ---(
-       < n4 : Node | egress: < e4,150.0 * delta >,
-                     ingress: (< in4,100.0 * delta > ; < in5,200.0 * delta > ; < in6,125.0 * delta >),
-                     reservationMap: empty,
-                     sqn: 0 >
-      
-      [0.0, crtr([in1,n1,e1] [in4,n4,e4],[in4,n4,e4],minBW,20.0,maxT,n1), 0]
-      [2.0, crtr([in2,n2,e2] [in5,n4,e4],[in5,n4,e4],minBW,80.0,maxT,n2), 0]
-      [1.0, crtr([in3,n3,e3] [in6,n4,e4],[in6,n4,e4],minBW,60.0,maxT,n3), 0]
-  	  )
-	  .
-	  )
-  	
-	*** New Scenarios
-    --- common parameters
-    --- delta = 0.8
-    --- capacity: A 100 B 200 C 125 D 150
-	
-    --- Scenario 1, Fig.2
-    --- demands: 20, 80, 60
-    --- allocated: 15, 60, 45
-    ---
-    eq initState = { 0.0 | nil } 
-       < m : Monitor | snapshots: empty > [5.0, snapshot to m, 0]
-	 
-       < tb : Table | paths: ((n1 ; n4) ;; (n2 ; n4) ;; (n3 ; n4)),
-	                  links: (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
-					          ;; < n3 n4 1 (125.0 * delta) >) >
-							
-       < n1 : Node | reservationMap: empty,
-                     sqn: 0, sink: 0.0  > 
-       < n2 : Node | reservationMap: empty,
-                     sqn: 0, sink: 0.0 >
-       < n3 : Node | reservationMap: empty,
-                     sqn: 0, sink: 0.0 >
-       < n4 : Node | reservationMap: empty,
-                     sqn: 0, sink: (150.0 * delta) >
-
-      [0.0, crtr((n1 ; n4),n4,minBW,20.0,maxT,n1), 0]
-      [2.0, crtr((n2 ; n4),n4,minBW,80.0,maxT,n2), 0]
-      [1.0, crtr((n3 ; n4),n4,minBW,60.0,maxT,n3), 0]
-  				   .
-  	
-	
-	
-	
-	
 endm
 
 set clear rules off .
 rew initConfig .
-
----(
-rew ideal(ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)),eg(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),120.0),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),n2,empty,2.0,reserve(r(n1, 0), 1, 1, 1, 2, n1 ; n2 ; n3, 0.0,
-    1.048813502304256e+2, 3.0e+2, ept),120.0) .
-
-rew tubeRatio(n2,
-              ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)),
-			  eg(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),120.0),
-			  (< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),
-			  filter(n2,empty,reserve(r(n1, 0), 1, 1, 1, 2, n1 ; n2 ; n3, 0.0,
-    1.048813502304256e+2, 3.0e+2, ept),cap(ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)))),
-			  2.0,120.0) .
-
-rew tubeDem(n2,
-            ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)),
-			eg(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),120.0),
-			(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),
-			filter(n2,empty,reserve(r(n1, 0), 1, 1, 1, 2, n1 ; n2 ; n3, 0.0,
-		    1.048813502304256e+2, 3.0e+2, ept),cap(ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)))),
-			2.0,120.0) .
-
-rew filter(n2,empty,reserve(r(n1, 0), 1, 1, 1, 2, n1 ; n2 ; n3, 0.0,
-		    1.048813502304256e+2, 3.0e+2, ept),cap(ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)))) .
-
-rew sameInAndE(< n1 n2 1 1.0e+2 >,< n2 n3 1 2.0e+2 >, (n1 ; n2 ; n3)) .
-
-rew inScalFctr(n2,n1,< n1 n2 1 1.0e+2 >,(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >), 
-			   r(n1, 0) |-> [n1 ; n2 ; n3,1,1,2,1 |-> < 0.0,1.048813502304256e+2,1.0e+2,3.0e+2,0.0 >],
-               2.0,120.0) .
-
-rew $aggrTubeDem(n2, < n1 n2 1 1.0e+2 >, < n2 n3 1 2.0e+2 >, 
-                 < n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >, 
-				 r(n1, 0) |-> [n1 ; n2 ; n3,1,1,2,1 |-> < 0.0,1.048813502304256e+2,1.0e+2,3.0e+2,0.0 >], 
-				 2.0,1.2e+2) .
-)	

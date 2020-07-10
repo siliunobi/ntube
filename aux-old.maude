@@ -1,8 +1,9 @@
 load prelim
+load path-table
 load parameters
 
 mod AUX is
-  inc MSG + SAMPLER + NODE + PARAMETERS .
+  inc MSG + PATH-TABLE + SAMPLER + NODE + PARAMETERS .
 
   var RID : ReservationId .
   vars INDEX PTR PTR' FIRST FIRST' LAST LAST' N : Nat .
@@ -10,7 +11,7 @@ mod AUX is
   vars MINBW MAXBW MAXT EXP FL FL' FL1 FL2 FL3 RESBW RESBW' IDBW GT CAP CAP' : Float .
   var ACCBW : AccBW .
   vars IN IN' IN'' O O' O'' E E' E'' I SRC : Address .
-  ---var PT : PathTable .  
+  var PT : PathTable .  
   vars RM RM' : ReservationMap .
   var VM : VersionMap .
   var VR : VerRecord .
@@ -21,7 +22,7 @@ mod AUX is
   var RES : Reservation .
   var RR : RsvRecord .
 
----(
+
   op crtr : Path -> Msg .
   eq crtr(([IN,O,E] P)) = crtr(([IN,O,E] P),segment([IN,O,E] P),minBW,maxBW,maxT,O) .
   
@@ -369,5 +370,5 @@ mod AUX is
        then $idBW(VM,GT,max(IDBW,FL))
        else $idBW(VM,GT,FL) fi .
   eq $idBW(empty,GT,FL) = FL .
-)
+
 endm
