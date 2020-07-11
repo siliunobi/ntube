@@ -6,7 +6,6 @@
 load parameters
 load initial-state
 ---load path-table 
-load ntube
 
 mod ANALYSIS is
   inc PARAMETERS + NAMES + PATH-GENERATOR .
@@ -15,7 +14,7 @@ mod ANALYSIS is
   eq initConfig = run(initState,LIMIT) .
   
   --- #sources, #intermediates, #destinations
-  eq initState = init(2,2,2) .
+  eq initState = init(5,10,1) .
 
 
   --- common parameters
