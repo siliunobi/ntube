@@ -28,7 +28,7 @@ fmod NAMES is
 endfm
 
 mod PATH-GENERATOR is
-  inc NODE + NAMES + SAMPLER .
+  inc NODE + NAMES + SAMPLER + N-TUBE .
   
   op randCap : -> Float .
   eq randCap = (float(sampleUniWithInt(5) + 1) * 10.0) .
@@ -47,8 +47,10 @@ mod PATH-GENERATOR is
   --- destinations, #ingress-of-source, #egress-of-source 
   op $init : Nat Nat Nat Config -> Config .
 	
+  --- some parameters for triggering 'tb' and 'm' to start	
   eq init(S,M,D) 
-   = $init(S,M,D,< tb : Table | links: genLinks(S,M,D), paths: genPaths(S,M,D) >) .
+   = { 0.0 | nil } < m : Monitor | snapshots: empty > [0.0, start to tb, 0] [0.0, snapshot to m, 0]
+     $init(S,M,D,< tb : Table | links: genLinks(S,M,D), paths: genPaths(S,M,D) >) .
    
   eq $init(s S,M,D,C) = $init(S,M,D,C < sc . (s S) : Node | reservationMap: empty, sqn: 0, sink: 0.0 >) .
   eq $init(0,s M,D,C) = $init(0,M,D,C < md . (s M) : Node | reservationMap: empty, sqn: 0, sink: 0.0 >) .
