@@ -32,7 +32,7 @@ mod N-TUBE is
   vars REST REST' : AttributeSet .
   vars SQN SQN' INDEX INDEX' PTR PTR' FIRST FIRST' LAST LAST' : Nat .
   var PP : PathPool .
-  vars P P' P'' SEG : AddrList .
+  vars P P' P'' SEG AL AL' : AddrList .
   var RID : ReservationId .
   vars ACCBW ACCBW' : AccBW .
   vars RM RM' : ReservationMap .
@@ -49,7 +49,6 @@ mod N-TUBE is
   vars T1 GT : Float .
   var M1 : Msg .
   var VRL : VerRecordList .
-  vars AL AL' : AddrList .
   vars N N' : Nat .
   vars LS LS' : Links .
   vars L INL EL : Link .
@@ -265,9 +264,9 @@ mod N-TUBE is
 		 
   --- current node, ingress, all ingress interfaces, all egress interfaces, reservation map, current time
   op startDem : Address Link Link Links ReservationMap Float -> Float .
-  eq startDem(O,INL,EL,LS,(RID |-> [(AL ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT)
-   = startDem(O,INL,EL,LS,RM,GT) + 
-     adjIdDem(O,INL,EL,LS,(RID |-> [(AL ; O ; AL'),FIRST,FIRST,LAST,VM]),(RID |-> [(AL ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT) .
+  eq startDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT)
+   = startDem(O,< O' O N CAP >,EL,LS,RM,GT) + 
+     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT) .
   eq startDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT)
    = startDem(O,INL,EL,LS,RM,GT) [owise] .
   eq startDem(O,INL,EL,LS,empty,GT) = 0.0 .  
@@ -275,9 +274,9 @@ mod N-TUBE is
   
   --- current node, ingress, all ingress interfaces, all egress interfaces, reservation map, current time
   op transitDem : Address Link Link Links ReservationMap Float -> Float .
- ceq transitDem(O,INL,EL,LS,(RID |-> [(AL ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT)
-  =  transitDem(O,INL,EL,LS,RM,GT) + 
-     adjIdDem(O,INL,EL,LS,(RID |-> [(AL ; O ; AL'),PTR,FIRST,LAST,VM]),(RID |-> [(AL ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT) 
+ ceq transitDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT)
+  =  transitDem(O,< O' O N CAP >,EL,LS,RM,GT) + 
+     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT) 
   if PTR > FIRST .
   eq transitDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT)
   =  transitDem(O,INL,EL,LS,RM,GT) [owise] .
@@ -288,8 +287,8 @@ mod N-TUBE is
   ---??? also for transitDem: IN is not needed
   --- current node, all ingress interfaces, all egress interfaces, matching reservation, reservation map, current time
   op adjIdDem : Address Link Link Links Reservation ReservationMap Float -> Float .
-  eq adjIdDem(O,INL,EL,LS,(RID |-> [(P ; O ; P'),PTR,FIRST,LAST,VM]),RM,GT)
-  =  egScalFctr(O,src(P ; O ; P'),EL,LS,RM,GT) 
+  eq adjIdDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM]),RM,GT)
+  =  egScalFctr(O,src(P),EL,LS,RM,GT) 
   	 	* min(idBW(VM,GT),min(cap(INL),cap(EL))) .	
 	
 

@@ -241,6 +241,7 @@ mod ANALYSIS is
     --- delta = 0.8
     --- capacity: A 100 B 200 C 125 D 150
 	
+	---(
     --- Scenario 1, Fig.2
     --- demands: 20, 80, 60
     --- allocated: 15, 60, 45
@@ -265,16 +266,198 @@ mod ANALYSIS is
       [2.0, crtr((n2 ; n4),n4,minBW,80.0,maxT,n2), 0]
       [1.0, crtr((n3 ; n4),n4,minBW,60.0,maxT,n3), 0]
   				   .
-  	
+  	)
 	
+  --- Scenario 2, Fig.3
+  --- demands: 20, 400 (200 + 200), 60
+  --- allocated: 10, 80, 30
+  --- a1 and a2 are attackers, both requesting from the same ingress to egress
+  ---(
+  eq initState = { 0.0 | nil }
+     < m : Monitor | snapshots: empty > [5.0, snapshot to m, 0]
+     < tb : Table | paths: ((n1 ; n4) ;; (a1 ; n2 ; n4) ;; 
+	                        (a2 ; n2 ; n4) ;; (n3 ; n4)),
+					links: (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+					          ;; < n3 n4 1 (125.0 * delta) > 
+							  ;; < a1 n2 1 Infinity > ;; < a2 n2 1 Infinity >) > 
+							
+     < n1 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  > 
+     < n2 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  >
+     < n3 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0 >
+     < n4 : Node | reservationMap: empty,
+                   sqn: 0, sink: (150.0 * delta) >			   
+     < a1 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  > 
+     < a2 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  >
+
+    [0.0, crtr((n1 ; n4),n4,minBW,20.0,maxT,n1), 0]
+    [0.0, crtr((a1 ; n2 ; n4),(n2 ; n4),minBW,200.0,maxT,a1), 0]
+	[0.0, crtr((a2 ; n2 ; n4),(n2 ; n4),minBW,200.0,maxT,a2), 0]
+    [0.0, crtr((n3 ; n4),n4,minBW,60.0,maxT,n3), 0]
+				   .
+	)
 	
+    --- Scenario 3, Fig.4
+    --- demands: 80 (a1), 120 (a1), 60
+    --- allocated: 32, 48, 40
+    ---(
+    eq initState = { 0.0 | nil }
+       < m : Monitor | snapshots: empty > [5.0, snapshot to m, 0]
+       < tb : Table | paths: ((a1 ; n1 ; n4) ;; (a1 ; n4) ;; (n3 ; n4)),
+	                  links: (< n1 n4 1 (100.0 * delta) > ;; < a1 n4 1 (200.0 * delta) > 
+					          ;; < n3 n4 1 (125.0 * delta) > ;; < a1 n1 1 Infinity >) > 
+							
+       < a1 : Node | reservationMap: empty,
+                     sqn: 0, sink: 0.0  > 
+       < n1 : Node | reservationMap: empty,
+                     sqn: 0, sink: 0.0 >
+       < n3 : Node | reservationMap: empty,
+                     sqn: 0, sink: 0.0 >
+       < n4 : Node | reservationMap: empty,
+                     sqn: 0, sink: (150.0 * delta) >	
+
+      [2.0, crtr((a1 ; n1 ; n4),(n1 ; n4),minBW,80.0,maxT,a1), 0]
+      [1.0, crtr((a1 ; n4),n4,minBW,120.0,maxT,a1), 0]
+      [3.0, crtr((n3 ; n4),n4,minBW,60.0,maxT,n3), 0]
+  				   .
+  	)
 	
-	
+  --- Scenario 4, Fig.5
+  --- demands: 80 (a3), 160 (a1,a2), 60
+  --- allocated: 32, 64, 24
+  ---(
+  eq initState = { 0.0 | nil }
+     < m : Monitor | snapshots: empty > [sampleExp(1.0), snapshot to m, 0]
+     < tb : Table | paths: ((a3 ; n4) ;; (a1 ; n2 ; n4) ;; (a2 ; n2 ; n4) ;; (n3 ; n4)),
+	                links: (< a3 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+					        ;; < a1 n2 1 Infinity > ;; < a2 n2 1 Infinity >
+							;; < n3 n4 1 (125.0 * delta) >) > 
+							
+     < a3 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  > 
+				   
+     < n2 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  >
+     < n3 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0 >
+     < n4 : Node | reservationMap: empty,
+                   sqn: 0, sink: (150.0 * delta) >
+				   
+     < a1 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  > 
+     < a2 : Node | reservationMap: empty,
+                   sqn: 0, sink: 0.0  >
+
+    [1.0, crtr((a3 ; n4),n4,minBW,80.0,maxT,a3), 0]
+    [3.0, crtr((a1 ; n2 ; n4),(n2 ; n4),minBW,80.0,maxT,a1), 0]
+	[2.0, crtr((a2 ; n2 ; n4),(n2 ; n4),minBW,80.0,maxT,a2), 0]
+    [0.0, crtr((n3 ; n4),n4,minBW,60.0,maxT,n3), 0]
+				   .  
+  )
 endm
 
 set clear rules off .
 rew initConfig .
 
+	---(	
+rew ideal(< n2 n4 1 (200.0 * delta) >,
+          < n4 null 1 (150.0 * delta) >,
+		 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+		 					          ;; < n3 n4 1 (125.0 * delta) >),
+	     n4,
+		 (r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+	     2.0,
+		 reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),
+		 (150.0 * delta)) .
+
+
+rew tubeRatio(n4,< n2 n4 1 (200.0 * delta) >,< n4 null 1 (150.0 * delta) >,
+	 		 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+	 		 					          ;; < n3 n4 1 (125.0 * delta) >),
+			 filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+			 reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),
+			 cap(< n2 n4 1 (200.0 * delta) >)),2.0,(150.0 * delta)) .
+			
+
+rew reqRatioStart(n4,rid(reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept)),
+                  < n2 n4 1 (200.0 * delta) >,< n4 null 1 (150.0 * delta) >,
+		 		 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+		 		 					          ;; < n3 n4 1 (125.0 * delta) >),
+				 res(filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+				     reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),
+					 rid(reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept))),
+				 filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+				reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),2.0) .
+				
+---(
+r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,
+    3.0e+2,2.0e+1 >], r(n2, 0) |-> [n2 ; n4,1,1,1,1 |-> < 0.0,8.0e+1,8.0e+1,
+    3.0e+2,0.0 >], r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,
+    3.0e+2,6.0e+1 >]
+)		
+				
+		
+rew startDem(n4,< n2 n4 1 (200.0 * delta) >,< n4 null 1 (150.0 * delta) >,
+	 		 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+	 		 					          ;; < n3 n4 1 (125.0 * delta) >),
+			 (r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,
+    3.0e+2,2.0e+1 >], r(n2, 0) |-> [n2 ; n4,1,1,1,1 |-> < 0.0,8.0e+1,8.0e+1,
+    3.0e+2,0.0 >], r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,
+    3.0e+2,6.0e+1 >]),2.0) .
+					
+
+
+rew res(filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+				     reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),
+					 rid(reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept))) .
+					 
+rew egScalFctr(n4,src(n2 ; n4),< n4 null 1 (150.0 * delta) >,
+	 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+	 					          ;; < n3 n4 1 (125.0 * delta) >),
+	 filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+	r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+	reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),
+      2.0) .
+	  
+
+rew linkRatioStart(n4,< n2 n4 1 (200.0 * delta) >,< n4 null 1 (150.0 * delta) >,
+	 		 (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+	 		 					          ;; < n3 n4 1 (125.0 * delta) >),
+		 filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+ 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+		reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),2.0) .
+
+
+rew adjIdDem(n4,< n2 n4 1 (200.0 * delta) >,< n4 null 1 (150.0 * delta) >, 
+             (< n1 n4 1 (100.0 * delta) > ;; < n2 n4 1 (200.0 * delta) > 
+		 					          ;; < n3 n4 1 (125.0 * delta) >),
+									  
+				 res(filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+				     reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)),
+					 rid(reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept))),
+					 
+	   		 (r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,
+    3.0e+2,2.0e+1 >], r(n2, 0) |-> [n2 ; n4,1,1,1,1 |-> < 0.0,8.0e+1,8.0e+1,
+    3.0e+2,0.0 >], r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,
+    3.0e+2,6.0e+1 >]),
+					
+	   	     2.0) .	
+		
+rew filter(n4,(r(n1, 0) |-> [n1 ; n4,1,1,1,1 |-> < 0.0,2.0e+1,2.0e+1,3.0e+2,2.0e+1 >], 
+	   		 		r(n3, 0) |-> [n3 ; n4,1,1,1,1 |-> < 0.0,6.0e+1,6.0e+1,3.0e+2,6.0e+1 >]),
+			reserve(r(n2,0),1,1,1,1,(n2 ; n4),0.0,80.0,300.0,ept),cap(< n2 n4 1 (200.0 * delta) >)) .
+
+)
 ---(
 rew ideal(ing(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >)),eg(n2,(n1 ; n2 ; n3),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),120.0),(< n1 n2 1 1.0e+2 > ;; < n2 n3 1 2.0e+2 >),n2,empty,2.0,reserve(r(n1, 0), 1, 1, 1, 2, n1 ; n2 ; n3, 0.0,
     1.048813502304256e+2, 3.0e+2, ept),120.0) .
