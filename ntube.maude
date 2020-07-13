@@ -213,6 +213,7 @@ mod N-TUBE is
   --- 4. CMP
   --- atSrt or onPth
   --- first node: idBW = MaxBW
+  ---(
   crl < TB : Table | links: LS, REST' >
       < O : Node | reservationMap: RM,
 	               sink: SINK, REST >  --- SINK=CAP
@@ -224,7 +225,8 @@ mod N-TUBE is
 	                     INDEX |-> < MINBW, MAXBW, (if atSrt(s PTR,FIRST) 
 						 	then min(MAXBW,cap(ing(O,P,LS))) else min(min(MAXBW,cap(ing(O,P,LS))),prevIdeal(ACCBW)) fi),
 						 	MAXT, min(ACCBW (AVAIL ; IDEAL)) >], RM),
-				   sink: SINK, REST >
+				   sink: SINK, REST > 
+				
 	  (if atEnd(s PTR,LAST)   --- deal with a segment of only one node
 	     then [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to O', drop?]            
 		 else [mDelay, reserve(RID,INDEX,s s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to next(O,P), drop?]
@@ -233,7 +235,35 @@ mod N-TUBE is
          AVAIL := avail(eg(O,P,LS,SINK),O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW)) /\
          IDEAL := min(min(cap(ing(O,P,LS)),MAXBW),
 		 	ideal(ing(O,P,LS),eg(O,P,LS,SINK),LS,O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW),SINK)) . 	
+)
 
+
+
+  crl < TB : Table | links: LS, REST' >
+      < O : Node | reservationMap: RM,
+	               sink: SINK, REST >  --- SINK=CAP
+      {T, reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW) from O' to O}
+    =>
+	  < TB : Table | links: LS, REST' >
+	  < O : Node | reservationMap: insert(RID,
+	               		[P,s PTR,FIRST,LAST,
+	                     INDEX |-> < MINBW, MAXBW, (if atSrt(s PTR,FIRST) 
+						 	then min(MAXBW,cap(ing(O,P,LS))) else min(min(MAXBW,cap(ing(O,P,LS))),prevIdeal(ACCBW)) fi),
+						 	MAXT, min(ACCBW (AVAIL ; IDEAL)) >], RM),
+				   sink: SINK, REST > 
+				
+	  (if atEnd(s PTR,LAST)   --- deal with a segment of only one node
+	     then [mDelay, reply(RID,INDEX,PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to O', drop?]            
+		 else [mDelay, reserve(RID,INDEX,s s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW (AVAIL ; IDEAL)) from O to next(O,P), drop?]
+	   fi)
+	  if (atSrt(s PTR,FIRST) or onPth(s PTR,FIRST,LAST)) /\
+         AVAIL := avail(eg(O,P,LS,SINK),O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW)) /\
+         IDEAL := min(min(cap(ing(O,P,LS)),MAXBW),
+		 	ideal(ing(O,P,LS),eg(O,P,LS,SINK),LS,O,RM,T,reserve(RID,INDEX,s PTR,FIRST,LAST,P,MINBW,MAXBW,MAXT,ACCBW),SINK)) . 	
+			
+			
+			
+			
 
   --- ideally provided
   --- also deal with if the current node O is the first on a path
@@ -242,10 +272,10 @@ mod N-TUBE is
   op ideal : Link Link Links Address ReservationMap Float Content Float -> Float .
   eq ideal(INL,EL,LS,O,RM,GT,CONT,SINK) 
    = (if first(CONT) == ptr(CONT)
-        then reqRatioStart(O,rid(CONT),INL,EL,LS,res(filter(O,RM,CONT,cap(INL)),rid(CONT)),filter(O,RM,CONT,cap(INL)),GT) *
-             linkRatioStart(O,INL,EL,LS,filter(O,RM,CONT,cap(INL)),GT) 
-        else reqRatioTransit(O,rid(CONT),INL,EL,LS,res(filter(O,RM,CONT,cap(INL)),rid(CONT)),filter(O,RM,CONT,cap(INL)),GT) *
-             linkRatioTransit(O,INL,EL,LS,filter(O,RM,CONT,cap(INL)),GT)
+        then reqRatioStart(O,rid(CONT),INL,EL,LS,res(filter(O,RM,CONT,cap(INL)),rid(CONT)),filter(O,RM,CONT,cap(INL)),GT,SINK) *
+             linkRatioStart(O,INL,EL,LS,filter(O,RM,CONT,cap(INL)),GT,SINK) 
+        else reqRatioTransit(O,rid(CONT),INL,EL,LS,res(filter(O,RM,CONT,cap(INL)),rid(CONT)),filter(O,RM,CONT,cap(INL)),GT,SINK) *
+             linkRatioTransit(O,INL,EL,LS,filter(O,RM,CONT,cap(INL)),GT,SINK)
       fi) * 
      tubeRatio(O,INL,EL,LS,filter(O,RM,CONT,cap(INL)),GT,SINK) * 
 	 cap(EL) .  
@@ -253,44 +283,54 @@ mod N-TUBE is
 
   --- current node, rid, ingress, reservation map, current time
   --- also deal with if the current node O is the first
-  op reqRatioStart : Address ReservationId Link Link Links Reservation ReservationMap Float  -> Float .
-  eq reqRatioStart(O,RID,INL,EL,LS,RES,RM,GT)
-  =  adjIdDem(O,INL,EL,LS,RES,RM,GT) / startDem(O,INL,EL,LS,RM,GT) .
+  op reqRatioStart : Address ReservationId Link Link Links Reservation ReservationMap Float Float -> Float .
+  eq reqRatioStart(O,RID,INL,EL,LS,RES,RM,GT,SINK)
+  =  adjIdDem(O,INL,EL,LS,RES,RM,GT,SINK) / startDem(O,INL,EL,LS,RM,GT,SINK) .
    
-  op reqRatioTransit : Address ReservationId Link Link Links Reservation ReservationMap Float  -> Float .
-  eq reqRatioTransit(O,RID,INL,EL,LS,RES,RM,GT)
-  =  adjIdDem(O,INL,EL,LS,RES,RM,GT) / transitDem(O,INL,EL,LS,RM,GT) .
+  op reqRatioTransit : Address ReservationId Link Link Links Reservation ReservationMap Float Float  -> Float .
+  eq reqRatioTransit(O,RID,INL,EL,LS,RES,RM,GT,SINK)
+  =  adjIdDem(O,INL,EL,LS,RES,RM,GT,SINK) / transitDem(O,INL,EL,LS,RM,GT,SINK) .
   
 		 
   --- current node, ingress, all ingress interfaces, all egress interfaces, reservation map, current time
-  op startDem : Address Link Link Links ReservationMap Float -> Float .
-  eq startDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT)
-   = startDem(O,< O' O N CAP >,EL,LS,RM,GT) + 
-     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT) .
-  eq startDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT)
-   = startDem(O,INL,EL,LS,RM,GT) [owise] .
-  eq startDem(O,INL,EL,LS,empty,GT) = 0.0 .  
+  op startDem : Address Link Link Links ReservationMap Float Float -> Float .
+  eq startDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT,SINK)
+   = startDem(O,< O' O N CAP >,EL,LS,RM,GT,SINK) + 
+     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),FIRST,FIRST,LAST,VM],RM),GT,SINK) .
+  eq startDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT,SINK)
+   = startDem(O,INL,EL,LS,RM,GT,SINK) [owise] .
+  eq startDem(O,INL,EL,LS,empty,GT,SINK) = 0.0 .  
   
   
   --- current node, ingress, all ingress interfaces, all egress interfaces, reservation map, current time
-  op transitDem : Address Link Link Links ReservationMap Float -> Float .
- ceq transitDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT)
-  =  transitDem(O,< O' O N CAP >,EL,LS,RM,GT) + 
-     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT) 
+  op transitDem : Address Link Link Links ReservationMap Float Float -> Float .
+ ceq transitDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT,SINK)
+  =  transitDem(O,< O' O N CAP >,EL,LS,RM,GT,SINK) + 
+     adjIdDem(O,< O' O N CAP >,EL,LS,(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM]),(RID |-> [(AL ; O' ; O ; AL'),PTR,FIRST,LAST,VM],RM),GT,SINK) 
   if PTR > FIRST .
-  eq transitDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT)
-  =  transitDem(O,INL,EL,LS,RM,GT) [owise] .
-  eq transitDem(O,INL,EL,LS,empty,GT) = 0.0 .
+  eq transitDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM],RM),GT,SINK)
+  =  transitDem(O,INL,EL,LS,RM,GT,SINK) [owise] .
+  eq transitDem(O,INL,EL,LS,empty,GT,SINK) = 0.0 .
   
   
   --- for startDem
   ---??? also for transitDem: IN is not needed
   --- current node, all ingress interfaces, all egress interfaces, matching reservation, reservation map, current time
-  op adjIdDem : Address Link Link Links Reservation ReservationMap Float -> Float .
+  op adjIdDem : Address Link Link Links Reservation ReservationMap Float Float -> Float .
+*** Wrong! Shouldn't be EL! Should be RID's egress
+  ---(
   eq adjIdDem(O,INL,EL,LS,(RID |-> [P,PTR,FIRST,LAST,VM]),RM,GT)
   =  egScalFctr(O,src(P),EL,LS,RM,GT) 
   	 	* min(idBW(VM,GT),min(cap(INL),cap(EL))) .	
-	
+  )
+  
+  eq adjIdDem(O,INL,EL,(< O O' N CAP > ;; LS),(RID |-> [(AL ; O ; O' ; AL'),PTR,FIRST,LAST,VM]),RM,GT,SINK)
+  =  egScalFctr(O,src(AL ; O ; O' ; AL'),< O O' N CAP >,(< O O' N CAP > ;; LS),RM,GT) 
+  	 	* min(idBW(VM,GT),min(cap(INL),CAP)) .	  
+  eq adjIdDem(O,INL,EL,LS,(RID |-> [(AL ; O),PTR,FIRST,LAST,VM]),RM,GT,SINK)
+  =  egScalFctr(O,src(AL ; O),< O null 0 SINK >,LS,RM,GT) 
+  	 	* min(idBW(VM,GT),min(cap(INL),SINK)) .	 
+		
 
   --- current node, source, all ingress interfaces, egress, all egress interfaces, reservation map, current time
   op egScalFctr : Address Address Link Links ReservationMap Float -> Float .
@@ -341,16 +381,16 @@ mod N-TUBE is
 	
   --- current node, ingress, all ingress interfaces, all egress interfaces, reservation map, current time
   --- current node: either start, or transit
-  op linkRatioStart : Address Link Link Links ReservationMap Float -> Float .
-  eq linkRatioStart(O,INL,EL,LS,RM,GT)
-  =  min(cap(INL),startDem(O,INL,EL,LS,RM,GT)) /
-     (min(cap(INL),startDem(O,INL,EL,LS,RM,GT)) + min(cap(INL),transitDem(O,INL,EL,LS,RM,GT))) .
+  op linkRatioStart : Address Link Link Links ReservationMap Float Float -> Float .
+  eq linkRatioStart(O,INL,EL,LS,RM,GT,SINK)
+  =  min(cap(INL),startDem(O,INL,EL,LS,RM,GT,SINK)) /
+     (min(cap(INL),startDem(O,INL,EL,LS,RM,GT,SINK)) + min(cap(INL),transitDem(O,INL,EL,LS,RM,GT,SINK))) .
  
  
-  op linkRatioTransit : Address Link Link Links ReservationMap Float -> Float .
-  eq linkRatioTransit(O,INL,EL,LS,RM,GT)
-  =  min(cap(INL),transitDem(O,INL,EL,LS,RM,GT)) /
-     (min(cap(INL),startDem(O,INL,EL,LS,RM,GT)) + min(cap(INL),transitDem(O,INL,EL,LS,RM,GT))) .		 
+  op linkRatioTransit : Address Link Link Links ReservationMap Float Float -> Float .
+  eq linkRatioTransit(O,INL,EL,LS,RM,GT,SINK)
+  =  min(cap(INL),transitDem(O,INL,EL,LS,RM,GT,SINK)) /
+     (min(cap(INL),startDem(O,INL,EL,LS,RM,GT,SINK)) + min(cap(INL),transitDem(O,INL,EL,LS,RM,GT,SINK))) .		 
 
 
   --- current node, ingress, all ingress interfaces of the node, egress, reservation map, current time
