@@ -64,13 +64,75 @@ mod N-TUBE is
      {T, start to TB}
   =>
      < TB : Table | paths: PP, REST >
-     crtr(PP) .  --- 1. CRTR, create reservations
-
-  op crtr : PathPool -> Config .
+     crtr(PP,sampleUniWithInt(2) + 1) .  --- #paths/reservations chosen
+	 
+********* could be NOT ALL, but SOME
+  ---(
+  --- generate reservations for ALL paths
+  op crtr : PathPool Nat -> Config .
   eq crtr((O ; AL) ;; PP) 
    = crtr(PP) [0.0, crtr((O ; AL),AL,minBW,maxBW,maxT,O), 0] .  --- assuming a segment starts from 2nd node in a path
   eq crtr(ept) = null .
-
+  )
+  
+  sorts Pair Pairs .
+  subsort Pair < Pairs .
+  op <_;_> : Address Nat -> Pair .
+  op ept : -> Pairs .
+  op _;_ : Pairs Pairs -> Pairs [ctor assoc comm id: ept] .
+  
+  sort PathList .
+  subsort AddrList < PathList .
+  op eptPathList : -> PathList .
+  op _;;;_ : PathList PathList -> PathList [ctor assoc id: eptPathList] .
+  
+  var PAIRS : Pairs .
+  vars PL PL' : PathList .
+  
+  op pathPoolToList : PathPool -> PathList .
+  eq pathPoolToList((O ; AL) ;; PP) = (O ; AL) ;;; pathPoolToList(PP) .
+  eq pathPoolToList(ept) = eptPathList .
+  
+  op size : PathList -> Nat .
+  eq size(AL ;;; PL) = s size(PL) .
+  eq size(eptPathList) = 0 .
+  
+  op notExist : Address Pairs -> Bool .
+  eq notExist(O,(PAIRS ; < O ; N >)) = false .
+  eq notExist(O,PAIRS) = true [owise] .
+  
+  op nth : PathList Nat -> AddrList .
+ ceq nth((AL ;;; PL),s N) = nth(PL,N) if N >= 1 .
+  eq nth((AL ;;; PL),1) = AL .
+  
+  
+  op crtr : PathPool Nat -> Config .
+  op crtr : PathList Nat Pairs -> Config .
+  op $crtr : PathList Nat Pairs AddrList -> Config .
+  
+  eq crtr(PP,N) = crtr(pathPoolToList(PP),N,ept) .
+  eq crtr(PL,N,PAIRS) = $crtr(PL,N,PAIRS,nth(PL,sampleUniWithInt(size(PL)) + 1)) .
+ ceq $crtr((PL ;;; (O ; AL) ;;; PL'),N,(PAIRS ; < O ; N' >),(O ; AL))
+   = $crtr((PL ;;; PL'),N,(PAIRS ; < O ; s N' >),
+     (if (PL ;;; PL') == eptPathList then empty 
+	    else nth((PL ;;; PL'),sampleUniWithInt(size(PL ;;; PL')) + 1) fi))
+     [0.0, crtr((O ; AL),AL,minBW,maxBW,maxT,O), 0]
+     if N' < N . 
+ ceq $crtr((PL ;;; (O ; AL) ;;; PL'),N,PAIRS,(O ; AL))
+   = $crtr((PL ;;; PL'),N,(PAIRS ; < O ; 1 >),
+     (if (PL ;;; PL') == eptPathList then empty 
+	    else nth((PL ;;; PL'),sampleUniWithInt(size(PL ;;; PL')) + 1) fi))
+     [0.0, crtr((O ; AL),AL,minBW,maxBW,maxT,O), 0]
+     if notExist(O,PAIRS) . 
+ ceq $crtr((PL ;;; (O ; AL) ;;; PL'),N,(PAIRS ; < O ; N' >),(O ; AL))
+   = $crtr((PL ;;; PL'),N,(PAIRS ; < O ; s N' >),
+     (if (PL ;;; PL') == eptPathList then empty 
+	    else nth((PL ;;; PL'),sampleUniWithInt(size(PL ;;; PL')) + 1) fi))
+     if N' >= N . 	 	 
+  eq $crtr(eptPathList,N,PAIRS,AL) = null .
+  
+  
+   
 
   --- 1. CRTR
   --- randomly cut off a segment of the path
@@ -86,6 +148,7 @@ mod N-TUBE is
      [mDelay, reserve(r(O,SQN),(SQN + 1),1,first(SEG,P),last(SEG,P),P,MINBW,MAXBW,MAXT,ept) 
               from O to next(O,P), drop?] 
 	 [rnDelay, renew(r(O,SQN),P,SEG,MINBW,MAXBW,MAXT,O), drop?] .  --- renew a reservation	  
+		
 			  
   ---(
   --- 15. RST 
@@ -418,7 +481,8 @@ mod N-TUBE is
   op adjReqDem : Address Reservation Link Link Links ReservationMap Float Float -> Float .
   eq adjReqDem(O,RES,INL,EL,LS,RM,GT,SINK)
    = min(inScalFctr(O,resSr(RES),INL,LS,RM,GT,SINK),egScalFctr(O,resSr(RES),EL,LS,RM,GT)) * reqDem(O,RES,INL,EL,LS,GT) .
-  
+
+   
   op resSr : Reservation -> Address .
   eq resSr(RID |-> [(O ; P),PTR,FIRST,LAST,VM]) = O .
   

@@ -21,7 +21,8 @@ mod PARAMETERS is
 
   --- maximum desired bandwidth
   op maxBW : -> Float .
-  eq maxBW = genRandom(50.0,150.0) .
+  eq maxBW = float(sampleUniWithInt(11)) * 10.0 + 50.0 .
+  ---eq genRandom(Min, Max) = rand * (Max - Min) + Min .
 
   --- msg delay
   op mDelay : -> Float .
