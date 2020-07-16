@@ -57,21 +57,20 @@ mod N-TUBE is
   var RES : Reservation .
   var VR : VerRecord .
 
-
   --- trigger to create reservations
   rl [trigger] :
      < TB : Table | paths: PP, REST >
      {T, start to TB}
   =>
      < TB : Table | paths: PP, REST >
-     crtr(PP,sampleUniWithInt(2) + 1) .  --- #paths/reservations chosen
+     crtr(PP,resPerSrc) .  --- #paths/reservations chosen
 	 
 ********* could be NOT ALL, but SOME
   ---(
   --- generate reservations for ALL paths
   op crtr : PathPool Nat -> Config .
   eq crtr((O ; AL) ;; PP) 
-   = crtr(PP) [0.0, crtr((O ; AL),AL,minBW,maxBW,maxT,O), 0] .  --- assuming a segment starts from 2nd node in a path
+   = crtr(PP) [0.0, crtr((O ; AL),AL,minBW,maxBW,maxT,O), 0] .  --- assuming a segment starts from 2nd node in a (generated) path
   eq crtr(ept) = null .
   )
   
@@ -141,7 +140,7 @@ mod N-TUBE is
      < O : Node | sqn: SQN, reservationMap: RM, REST >
      {T, crtr(P,SEG,MINBW,MAXBW,MAXT,O)}
   => 
-     < M : Monitor | snapshots: insert(r(O,SQN),< T undefined >,RS), REST' >
+     < M : Monitor | snapshots: insert(r(O,SQN),< T undefined dest(P) >,RS), REST' >
      < O : Node | sqn: (SQN + 2), 
 	              reservationMap: insert(r(O,SQN),[P,0,first(SEG,P),last(SEG,P),
                                   (SQN + 1) |-> < MINBW, MAXBW, undefined, MAXT, undefined >],RM), REST >
@@ -250,6 +249,9 @@ mod N-TUBE is
   op prev : Address AddrList -> Address .
   eq prev(O,(P ; O' ; O ; P')) = O' . 
   eq prev(O,P) = null [owise] .  --- O is the first node  
+  
+  op dest : AddrList -> Address .
+  eq dest(P ; O) = O .
  
   --- first node's position
   op first : Content -> Nat .
@@ -700,7 +702,7 @@ mod N-TUBE is
   eq add(T,RS,AC) = $add(T,RS,AC,empty) .
   
   eq $add(T,(RID |-> SS,RS),< O : Node | reservationMap: (RID |-> [(O ; P),PTR,FIRST,LAST,VM],RM), REST > AC,RS')
-   = $add(T,RS,< O : Node | reservationMap: (RID |-> [(O ; P),PTR,FIRST,LAST,VM],RM), REST > AC,(RS',RID |-> (SS ;; < T latestIndex(VM) >))) .  
+   = $add(T,RS,< O : Node | reservationMap: (RID |-> [(O ; P),PTR,FIRST,LAST,VM],RM), REST > AC,(RS',RID |-> (SS ;; < T latestIndex(VM) dest(O ; P) >))) .  
      --- matching O indicates O is the source
   eq $add(T,empty,AC,RS') = RS' .
        

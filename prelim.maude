@@ -67,7 +67,8 @@ fmod SORTS is
   
   sort Snapshot Snapshots .
   subsort Snapshot < Snapshots .
-  op <__> : Float Float -> Snapshot . 
+  op <___> : Float Float Address -> Snapshot .  --- used in monitoring N-Tube
+  op <____> : Float Float Address Float -> Snapshot .  --- used in analysis
   op nil : -> Snapshots [ctor] .
   op _;;_ : Snapshots Snapshots -> Snapshots [ctor assoc id: nil] .
   
